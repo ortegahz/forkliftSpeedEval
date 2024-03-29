@@ -2,7 +2,7 @@ import argparse
 import logging
 import pickle
 import sys
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Event
 
 from cores.decoder import process_decoder
 from cores.displayer import process_displayer
@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument('--path_rtsp', default='rtsp://admin:1qaz2wsx@172.20.20.58:554/h264/ch0/main/av_stream')
     parser.add_argument('--args_tracker', default='/home/manu/tmp/args_tracker.pickle')
     parser.add_argument('--max_track_num', default=100, type=int)
+    parser.add_argument('--frame_rate', default=25, type=int)
     return parser.parse_args()
 
 
@@ -34,27 +35,27 @@ def run(args):
     with open(args.args_tracker, 'rb') as f:
         args_tracker = pickle.load(f)
     logging.info(args_tracker)
-    tracker = BYTETracker(args_tracker, frame_rate=30)
+    tracker = BYTETracker(args_tracker, frame_rate=args.frame_rate)
     inferer = Inferer(args.path_video, False, 0, args.weights_detector, 0, args.yaml_detector, args.img_size, False)
+    stop_event = Event()
 
     q_decoder = Queue()
-    p_decoder = Process(target=process_decoder, args=(args.path_rtsp, q_decoder), daemon=True)
+    p_decoder = Process(target=process_decoder, args=(args.path_video, q_decoder), daemon=True)
     p_decoder.start()
 
     q_displayer = Queue()
-    p_displayer = Process(target=process_displayer, args=(args.max_track_num, q_displayer), daemon=True)
+    p_displayer = Process(target=process_displayer, args=(args.max_track_num, q_displayer, stop_event), daemon=True)
     p_displayer.start()
 
     while True:
         item_frame = q_decoder.get()
         idx_frame, frame, fc = item_frame
         dets = inferer.infer_custom(frame, 0.4, 0.45, None, False, 1000)
-        # logging.info(dets)
         dets = dets[:, 0:5].detach().cpu().numpy()
-        # logging.info(dets)
         online_targets = tracker.update(dets, [frame.shape[0], frame.shape[1]], [frame.shape[0], frame.shape[1]])
-        # logging.info(online_targets)
         q_displayer.put([idx_frame, frame, online_targets])
+        if stop_event.is_set():
+            break
 
 
 def main():

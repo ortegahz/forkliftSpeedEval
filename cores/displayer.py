@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 
-def process_displayer(max_track_num, queue):
+def process_displayer(max_track_num, queue, event):
     sort_colours = np.random.rand(max_track_num, 3) * 255
 
     name_window = 'frame'
@@ -38,6 +38,7 @@ def process_displayer(max_track_num, queue):
         cv2.putText(frame, f'{idx_frame}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, 1, 2)
         cv2.imshow(name_window, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            event.set()
             break
 
     cv2.destroyAllWindows()
