@@ -1,16 +1,59 @@
 import argparse
 import logging
+import pickle
+import sys
+from multiprocessing import Process, Queue
 
+from cores.decoder import process_decoder
+from cores.displayer import process_displayer
 from utils.utils import set_logging
+
+sys.path.append('/home/manu/nfs/ByteTrack')
+from yolox.tracker.byte_tracker import BYTETracker
+
+sys.path.append('/home/manu/nfs/YOLOv6')
+from yolov6.core.inferer import Inferer
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--yaml_detector', default='/home/manu/nfs/YOLOv6/data/head.yaml', type=str)
+    parser.add_argument('--weights_detector',
+                        default='/home/manu/tmp/n6_ft_b64_nab_s640_dv2r_ncml_nsilu_ncont/weights/best_ckpt.pt')
+    parser.add_argument('--img_size', nargs='+', type=int, default=[640, 640])
+    parser.add_argument('--path_video',
+                        default='/media/manu/data/videos/vlc-record-2023-12-18-10h54m21s-rtsp___192.168.3.186_554_ch0_1-.mp4')
+    parser.add_argument('--args_tracker', default='/home/manu/tmp/args_tracker.pickle')
+    parser.add_argument('--max_track_num', default=100, type=int)
     return parser.parse_args()
 
 
 def run(args):
     logging.info(args)
+    with open(args.args_tracker, 'rb') as f:
+        args_tracker = pickle.load(f)
+    logging.info(args_tracker)
+    tracker = BYTETracker(args_tracker, frame_rate=30)
+    inferer = Inferer(args.path_video, False, 0, args.weights_detector, 0, args.yaml_detector, args.img_size, False)
+
+    q_decoder = Queue()
+    p_decoder = Process(target=process_decoder, args=(args.path_video, q_decoder), daemon=True)
+    p_decoder.start()
+
+    q_displayer = Queue()
+    p_displayer = Process(target=process_displayer, args=(args.max_track_num, q_displayer), daemon=True)
+    p_displayer.start()
+
+    while True:
+        item_frame = q_decoder.get()
+        idx_frame, frame, fc = item_frame
+        dets = inferer.infer_custom(frame, 0.4, 0.45, None, False, 1000)
+        logging.info(dets)
+        dets = dets[:, 0:5].detach().cpu().numpy()
+        logging.info(dets)
+        online_targets = tracker.update(dets, [frame.shape[0], frame.shape[1]], [frame.shape[0], frame.shape[1]])
+        logging.info(online_targets)
+        q_displayer.put([idx_frame, frame, online_targets])
 
 
 def main():
