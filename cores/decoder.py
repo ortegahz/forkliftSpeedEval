@@ -1,6 +1,9 @@
-import cv2
-import time
 import logging
+import time
+
+import cv2
+
+from utils.macros import *
 
 
 def process_decoder(path_video, queue, event, buff_len=5):
@@ -20,6 +23,7 @@ def process_decoder(path_video, queue, event, buff_len=5):
             logging.warning('decoder exiting !')
             event.set()
             break
+        frame = cv2.undistort(frame, camera_matrix, dist_coeffs)
 
         idx_frame += 1
         if queue.qsize() > buff_len:

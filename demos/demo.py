@@ -22,7 +22,7 @@ def parse_args():
                         default='/home/manu/tmp/n6_ft_b64_nab_s640_dv2r_ncml_nsilu_ncont/weights/best_ckpt.pt')
     parser.add_argument('--img_size', nargs='+', type=int, default=[640, 640])
     parser.add_argument('--path_video',
-                        default='/media/manu/data/videos/vlc-record-2023-12-18-10h54m21s-rtsp___192.168.3.186_554_ch0_1-.mp4')
+                        default='/media/manu/data/videos/jb.mp4')
     parser.add_argument('--path_rtsp', default='rtsp://admin:1qaz2wsx@172.20.20.58:554/h264/ch0/main/av_stream')
     parser.add_argument('--args_tracker', default='/home/manu/tmp/args_tracker.pickle')
     parser.add_argument('--max_track_num', default=100, type=int)

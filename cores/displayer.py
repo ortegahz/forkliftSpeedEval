@@ -2,7 +2,15 @@ import logging
 import time
 
 import cv2
-import numpy as np
+
+from utils.macros import *
+
+
+def uv_to_world(uv, camera_matrix, rotation_matrix, translation_vector, deep):
+    camera_coord = np.linalg.inv(camera_matrix) @ uv
+    camera_coord *= deep
+    world_coord = rotation_matrix @ camera_coord + translation_vector
+    return world_coord
 
 
 def process_displayer(max_track_num, queue, event):
@@ -30,7 +38,8 @@ def process_displayer(max_track_num, queue, event):
             color_id = sort_colours[sort_id % max_track_num, :]
             cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color_id, 2)
             box_size = (box[2] - box[0]) * (box[3] - box[1])
-            deep = 15 - box_size / 1024  # TODO: deep evaluation
+            deep = 15 - box_size / 4096  # TODO: deep evaluation
+            deep = deep if deep > 0 else 0
             cv2.putText(frame, f'{deep}', (box[0], box[1] + int(1.2 * 50)),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
             point_center = (int((box[0] + box[2]) / 2), int((box[1] + box[3]) / 2), tsp_frame)
@@ -44,15 +53,17 @@ def process_displayer(max_track_num, queue, event):
                 cv2.circle(frame, point_center[:2], 2, color_id, -1)
             speeds = []
             for i in range(len(trajectory) - 1):
-                point1 = np.array(trajectory[i])[:2]
-                point2 = np.array(trajectory[i + 1])[:2]
-                distance = np.linalg.norm(point2 - point1)
+                point1 = np.append(np.array(trajectory[i])[:2], 1)
+                point1_world = uv_to_world(point1, camera_matrix, rotation_matrix, translation_vector, deep)
+                point2 = np.append(np.array(trajectory[i + 1])[:2], 1)
+                point2_world = uv_to_world(point2, camera_matrix, rotation_matrix, translation_vector, deep)
+                distance = np.linalg.norm(point1_world - point2_world)
                 delta_t = trajectory[i + 1][2] - trajectory[i][2]
-                speed = distance / 512 / delta_t * 3.6
+                speed = 1.5 * distance / delta_t * 3.6  # TODO: speed evaluation
                 speeds.append(speed)
-                # logging.info((point1, point2, distance, delta_t, speed))
+                logging.info((point1_world, point2_world, distance, delta_t, speed))
             speed = np.mean(speeds) if speeds else 0
-            cv2.putText(frame, f'{speed} km/s', (box[0], box[1] + int(1.2 * 100)),
+            cv2.putText(frame, f'{speed} km/s', (box[0], box[1] + int(1.2 * 75)),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
             info = 'tid' + ' %d' % sort_id
             cv2.putText(frame, info, (box[0], box[1] + int(1.2 * 25)), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color_id, 2)
