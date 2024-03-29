@@ -40,7 +40,7 @@ def run(args):
     stop_event = Event()
 
     q_decoder = Queue()
-    p_decoder = Process(target=process_decoder, args=(args.path_video, q_decoder), daemon=True)
+    p_decoder = Process(target=process_decoder, args=(args.path_video, q_decoder, stop_event), daemon=True)
     p_decoder.start()
 
     q_displayer = Queue()
@@ -49,13 +49,13 @@ def run(args):
 
     while True:
         item_frame = q_decoder.get()
-        idx_frame, frame, fc = item_frame
+        tsp_frame, idx_frame, frame, fc = item_frame
+        if frame is None or stop_event.is_set():
+            break
         dets = inferer.infer_custom(frame, 0.4, 0.45, None, False, 1000)
         dets = dets[:, 0:5].detach().cpu().numpy()
         online_targets = tracker.update(dets, [frame.shape[0], frame.shape[1]], [frame.shape[0], frame.shape[1]])
-        q_displayer.put([idx_frame, frame, online_targets])
-        if stop_event.is_set():
-            break
+        q_displayer.put([tsp_frame, idx_frame, frame, online_targets])
 
 
 def main():
