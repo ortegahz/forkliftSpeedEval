@@ -22,7 +22,7 @@ def parse_args():
                         default='/home/manu/tmp/n6_ft_b64_nab_s640_dv2r_ncml_nsilu_ncont/weights/best_ckpt.pt')
     parser.add_argument('--img_size', nargs='+', type=int, default=[640, 640])
     parser.add_argument('--path_video',
-                        default='/media/manu/data/videos/jb.mp4')
+                        default='/media/manu/data/videos/wyl.mp4')
     parser.add_argument('--path_rtsp', default='rtsp://admin:1qaz2wsx@172.20.20.58:554/h264/ch0/main/av_stream')
     parser.add_argument('--args_tracker', default='/home/manu/tmp/args_tracker.pickle')
     parser.add_argument('--max_track_num', default=100, type=int)
@@ -40,7 +40,7 @@ def run(args):
     stop_event = Event()
 
     q_decoder = Queue()
-    p_decoder = Process(target=process_decoder, args=(args.path_video, q_decoder, stop_event), daemon=True)
+    p_decoder = Process(target=process_decoder, args=(args.path_rtsp, q_decoder, stop_event), daemon=True)
     p_decoder.start()
 
     q_displayer = Queue()

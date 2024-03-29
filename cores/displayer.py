@@ -38,14 +38,14 @@ def process_displayer(max_track_num, queue, event):
             color_id = sort_colours[sort_id % max_track_num, :]
             cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color_id, 2)
             box_size = (box[2] - box[0]) * (box[3] - box[1])
-            deep = 15 - box_size / 4096  # TODO: deep evaluation
+            deep = 12 - box_size / 1024  # TODO: deep evaluation
             deep = deep if deep > 0 else 0
             cv2.putText(frame, f'{deep}', (box[0], box[1] + int(1.2 * 50)),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
             point_center = (int((box[0] + box[2]) / 2), int((box[1] + box[3]) / 2), tsp_frame)
             if tid in trajectories_dict:
                 trajectories_dict[tid].append(point_center)
-                trajectories_dict[tid] = trajectories_dict[tid][-4:]  # keep n points
+                trajectories_dict[tid] = trajectories_dict[tid][-8:]  # keep n points
             else:
                 trajectories_dict[tid] = [point_center]
             trajectory = trajectories_dict[tid]
@@ -59,10 +59,10 @@ def process_displayer(max_track_num, queue, event):
                 point2_world = uv_to_world(point2, camera_matrix, rotation_matrix, translation_vector, deep)
                 distance = np.linalg.norm(point1_world - point2_world)
                 delta_t = trajectory[i + 1][2] - trajectory[i][2]
-                speed = 1.5 * distance / delta_t * 3.6  # TODO: speed evaluation
+                speed = 1.0 * distance / delta_t * 3.6  # TODO: speed evaluation
                 speeds.append(speed)
-                logging.info((point1_world, point2_world, distance, delta_t, speed))
-            speed = np.mean(speeds) if speeds else 0
+                # logging.info((point1_world, point2_world, distance, delta_t, speed))
+            speed = np.median(speeds) if speeds else 0
             cv2.putText(frame, f'{speed} km/s', (box[0], box[1] + int(1.2 * 75)),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2)
             info = 'tid' + ' %d' % sort_id
