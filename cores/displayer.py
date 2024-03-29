@@ -43,8 +43,8 @@ def process_displayer(max_track_num, queue, event):
         frame_count += 1
         elapsed_time = end_time - start_time
         fps = frame_count / elapsed_time
-        cv2.putText(frame, f'FPS: {fps:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-        cv2.putText(frame, f'id: {idx_frame}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+        cv2.putText(frame, f'fps: {fps:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, f'fid: {idx_frame}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
         cv2.imshow(name_window, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             event.set()
